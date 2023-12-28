@@ -32,6 +32,8 @@ def generate_level(level):
         for x in range(len(level[y])):
             if level[y][x] == '#':
                 Tile('wall', x, y)
+            elif level[y][x] == '!':
+                Tile('enemy', x, y)
             elif level[y][x] == '@':
                 new_player = Player(x, y)
     return new_player, x, y
@@ -49,7 +51,8 @@ tiles_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
 tile_images = {
-    'wall': load_image('bush.png')
+    'wall': load_image('bush.png'),
+    'enemy': load_image('enemy.png')
 }
 player_image = load_image('ball.png')
 
@@ -69,7 +72,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__(player_group, all_sprites)
         self.image = player_image
         self.rect = self.image.get_rect().move(
-            tile_width * pos_x + 15, tile_height * pos_y + 5)
+            tile_width * pos_x, tile_height * pos_y)
 
 
 player, level_x, level_y = generate_level(load_level('first_level.txt'))
