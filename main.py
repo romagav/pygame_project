@@ -1,7 +1,7 @@
 import pygame
 import sys
 import os
-
+pygame.init()
 
 def load_level(filename):
     with open(filename, 'r') as mapFile:
@@ -39,10 +39,10 @@ def generate_level(level):
 
 size = width, height = 800, 400
 screen = pygame.display.set_mode(size)
-pygame.mixer.music.load('E:/gitpr/sizif.mp3')
-pygame.mixer.music.play(-1)
 image = pygame.image.load('sand.png').convert_alpha()
 screen.blit(image, (0, 0))
+pygame.mixer.music.load('sizif.mp3')
+pygame.mixer.music.play()
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
