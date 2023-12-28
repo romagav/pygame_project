@@ -2,18 +2,11 @@ import pygame
 import sys
 import os
 
-size = width, height = 800, 400
-screen = pygame.display.set_mode(size)
-
 
 def load_level(filename):
     with open(filename, 'r') as mapFile:
         level_map = [line.strip() for line in mapFile]
-
-    # и подсчитываем максимальную длину
     max_width = max(map(len, level_map))
-
-    # дополняем каждую строку пустыми клетками ('.')
     return list(map(lambda x: x.ljust(max_width, '.'), level_map))
 
 
@@ -44,6 +37,12 @@ def generate_level(level):
     return new_player, x, y
 
 
+size = width, height = 800, 400
+screen = pygame.display.set_mode(size)
+pygame.mixer.music.load('E:/gitpr/sizif.mp3')
+pygame.mixer.music.play(-1)
+image = pygame.image.load('sand.png').convert_alpha()
+screen.blit(image, (0, 0))
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
@@ -72,12 +71,13 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
+
 player, level_x, level_y = generate_level(load_level('first_level.txt'))
 running = True
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+    all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
