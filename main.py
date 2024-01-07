@@ -1,4 +1,5 @@
 import pygame
+from time import sleep
 import sys
 import os
 
@@ -93,7 +94,12 @@ while running:
             if event.key == 1073741904:
                 player.rect.left -= 10
         screen.blit(image, (0, 0))
+    if pygame.sprite.spritecollideany(player, tiles_group):
+        screen.blit(image, (0, 0)) # здесь нужна картинка конец игры
         pygame.display.flip()
+        sleep(10)
+        player.kill()
+        player, level_x, level_y = generate_level(load_level('first_level.txt'))
     all_sprites.draw(screen)
     pygame.display.flip()
 pygame.quit()
