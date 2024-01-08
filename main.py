@@ -37,6 +37,8 @@ def generate_level(level):
                 Tile('wall', x, y)
             elif level[y][x] == '!':
                 Tile('enemy', x, y)
+            elif level[y][x] == '*':
+                WinTile('win', x, y)
             elif level[y][x] == '@':
                 new_player = Player(x, y)
     return new_player, x, y
@@ -51,11 +53,13 @@ pygame.mixer.music.play()
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
+win_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
 
 tile_images = {
     'wall': load_image('bush.png'),
-    'enemy': load_image('enemy.png')
+    'enemy': load_image('enemy.png'),
+    'win': load_image('win_tile.png')
 }
 player_image = load_image('ball.png')
 
@@ -65,7 +69,8 @@ tile_width = tile_height = 50
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
-        self.image = tile_images[tile_type]
+        image_1 = tile_images[tile_type]
+        self.image = pygame.transform.scale(image_1, (50, 50))
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
@@ -74,6 +79,15 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+
+
+class WinTile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y):
+        super().__init__(win_group, all_sprites)
+        image_1 = tile_images[tile_type]
+        self.image = pygame.transform.scale(image_1, (50, 50))
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
@@ -95,10 +109,17 @@ while running:
                 player.rect.left -= 10
         screen.blit(image, (0, 0))
     if pygame.sprite.spritecollideany(player, tiles_group):
-        screen.blit(image, (0, 0)) # здесь нужна картинка конец игры
+        screen.blit(image, (0, 0))  # здесь нужна картинка конец игры
         pygame.display.flip()
-        sleep(10)
+        sleep(4)
         player.kill()
+        player, level_x, level_y = generate_level(load_level('first_level.txt'))
+    if pygame.sprite.spritecollideany(player, win_group):
+        screen.blit(image, (0, 0))  # здесь нужна картинка победы
+        pygame.display.flip()
+        sleep(4)
+        player.kill()
+        # следующий уровень начинается здесь
         player, level_x, level_y = generate_level(load_level('first_level.txt'))
     all_sprites.draw(screen)
     pygame.display.flip()
