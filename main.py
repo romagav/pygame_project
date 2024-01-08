@@ -49,10 +49,13 @@ clock = pygame.time.Clock()
 size = width, height = 500, 500
 screen = pygame.display.set_mode(size)
 image = pygame.image.load('sand.png').convert_alpha()
+image_go = pygame.image.load('screen_gameover.png').convert_alpha()
+image_nl = pygame.image.load('screen_nextlevel.png').convert_alpha()
 image = pygame.transform.scale(image, (width, height))
+image_end = pygame.image.load('screen_win.png').convert_alpha()
 screen.blit(image, (0, 0))
 pygame.mixer.music.load('sizif.mp3')
-pygame.mixer.music.play()
+pygame.mixer.music.play(-1)
 player = None
 all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
@@ -94,8 +97,8 @@ class WinTile(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
-
-player, level_x, level_y = generate_level(load_level('first_level.txt'))
+n = 1
+player, level_x, level_y = generate_level(load_level('level_1.txt'))
 up, down, right, left = False, False, False, False
 running = True
 while running:
@@ -132,18 +135,24 @@ while running:
     screen.blit(image, (0, 0))
 
     if pygame.sprite.spritecollideany(player, tiles_group):
-        screen.blit(image, (0, 0))  # здесь нужна картинка конец игры
+        screen.blit(image_go, (0, 0))  # здесь нужна картинка конец игры
         pygame.display.flip()
         sleep(4)
         player.kill()
-        player, level_x, level_y = generate_level(load_level('first_level.txt'))
+        player, level_x, level_y = generate_level(load_level(f'level_{n}.txt'))
     if pygame.sprite.spritecollideany(player, win_group):
-        screen.blit(image, (0, 0))  # здесь нужна картинка победы
+        n += 1
+        screen.blit(image_nl, (0, 0))  # здесь нужна картинка победы
         pygame.display.flip()
         sleep(4)
         player.kill()
         # следующий уровень начинается здесь
-        player, level_x, level_y = generate_level(load_level('first_level.txt'))
+        if n == 3:
+            screen.blit(image_nl, (0, 0))  # здесь нужна картинка победы
+            pygame.display.flip()
+            sleep(-1)
+        player, level_x, level_y = generate_level(load_level(f'level_{n}.txt'))
+
     clock.tick(fps)
     all_sprites.draw(screen)
     pygame.display.flip()
