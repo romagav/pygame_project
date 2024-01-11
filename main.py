@@ -30,30 +30,69 @@ def load_image(name, colorkey=None):
 
 
 def generate_level(level):
-    new_player, x, y = None, None, None
+    win_tile, new_player, x, y, enemy, wall = None, None, None, None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '#':
-                Tile('wall', x, y)
+                wall = Tile('wall', x, y)
+                sprs.append(wall)
             elif level[y][x] == '!':
-                Tile('enemy', x, y)
+                enemy = Tile('enemy', x, y)
+                sprs.append(enemy)
             elif level[y][x] == '*':
-                WinTile('win', x, y)
+                win_tile = WinTile('win', x, y)
+                sprs.append(win_tile)
             elif level[y][x] == '@':
                 new_player = Player(x, y)
-    return new_player, x, y
+    return win_tile, new_player, enemy, wall, x, y
+
+FPS = 50
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+def start_screen():
+    intro_text = ["ЗАСТАВКА", "",
+                  "Правила игры",
+                  "Если в правилах несколько строк,",
+                  "приходится выводить их построчно"]
+
+    fon = pygame.transform.scale(load_image('start_screen.png'), (800, 800))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN or \
+                    event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+        clock.tick(FPS)
+
 
 
 fps = 60
+sprs = []
 clock = pygame.time.Clock()
-size = width, height = 500, 500
+size = width, height = 800, 800
 screen = pygame.display.set_mode(size)
 image = pygame.image.load('sand.png').convert_alpha()
+image = pygame.transform.scale(image, (width, height))
+screen.blit(image, (0, 0))
 image_go = pygame.image.load('screen_gameover.png').convert_alpha()
 image_nl = pygame.image.load('screen_nextlevel.png').convert_alpha()
-image = pygame.transform.scale(image, (width, height))
 image_end = pygame.image.load('screen_win.png').convert_alpha()
-screen.blit(image, (0, 0))
 pygame.mixer.music.load('sizif.mp3')
 pygame.mixer.music.play(-1)
 player = None
@@ -61,22 +100,28 @@ all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 win_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+num_of_level = 1
 
 tile_images = {
     'wall': load_image('bush.png'),
     'enemy': load_image('enemy.png'),
     'win': load_image('win_tile.png')
 }
+levels_names = {
+    1: 'first_level.txt',
+    2: 'second_level.txt',
+}
 player_image = load_image('ball.png')
 
 tile_width = tile_height = 50
 
-
+start_screen()
 class Tile(pygame.sprite.Sprite):
     def __init__(self, tile_type, pos_x, pos_y):
         super().__init__(tiles_group, all_sprites)
         image_1 = tile_images[tile_type]
         self.image = pygame.transform.scale(image_1, (50, 50))
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
@@ -85,6 +130,7 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
@@ -94,11 +140,12 @@ class WinTile(pygame.sprite.Sprite):
         super().__init__(win_group, all_sprites)
         image_1 = tile_images[tile_type]
         self.image = pygame.transform.scale(image_1, (50, 50))
+        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
-n = 1
-player, level_x, level_y = generate_level(load_level('level_1.txt'))
+
+win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level('first_level.txt'))
 up, down, right, left = False, False, False, False
 running = True
 while running:
@@ -135,24 +182,26 @@ while running:
     screen.blit(image, (0, 0))
 
     if pygame.sprite.spritecollideany(player, tiles_group):
-        screen.blit(image_go, (0, 0))  # здесь нужна картинка конец игры
+        screen.blit(image_go, (0, 0))
         pygame.display.flip()
         sleep(4)
         player.kill()
-        player, level_x, level_y = generate_level(load_level(f'level_{n}.txt'))
-    if pygame.sprite.spritecollideany(player, win_group):
-        n += 1
-        screen.blit(image_nl, (0, 0))  # здесь нужна картинка победы
-        pygame.display.flip()
-        sleep(4)
+        win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level(levels_names[num_of_level]))
+    if pygame.sprite.collide_mask(player, win_tile):
         player.kill()
-        # следующий уровень начинается здесь
-        if n == 3:
-            screen.blit(image_nl, (0, 0))  # здесь нужна картинка победы
+        num_of_level += 1
+        if num_of_level == 3:
+            screen.blit(image_end, (0, 0))
             pygame.display.flip()
-            sleep(-1)
-        player, level_x, level_y = generate_level(load_level(f'level_{n}.txt'))
-
+            sleep(5)
+            running = False
+        else:
+            for i in sprs:
+                i.kill()
+            screen.blit(image_nl, (0, 0))
+            pygame.display.flip()
+            sleep(4)
+            win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level(levels_names[num_of_level]))
     clock.tick(fps)
     all_sprites.draw(screen)
     pygame.display.flip()
