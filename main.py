@@ -50,14 +50,17 @@ def generate_level(level):
 fps = 60
 sprs = []
 clock = pygame.time.Clock()
-size = width, height = 500, 500
+size = width, height = 800, 800
 screen = pygame.display.set_mode(size)
 image = pygame.image.load('sand.png').convert_alpha()
 image = pygame.transform.scale(image, (width, height))
 screen.blit(image, (0, 0))
 image_go = pygame.image.load('screen_gameover.png').convert_alpha()
+image_go = pygame.transform.scale(image_go, (width, height))
 image_nl = pygame.image.load('screen_nextlevel.png').convert_alpha()
+image_nl = pygame.transform.scale(image_nl, (width, height))
 image_end = pygame.image.load('screen_win.png').convert_alpha()
+image_end = pygame.transform.scale(image_end, (width, height))
 pygame.mixer.music.load('sizif.mp3')
 pygame.mixer.music.play(-1)
 player = None
