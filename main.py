@@ -30,25 +30,33 @@ def load_image(name, colorkey=None):
 
 
 def generate_level(level):
-    win_tile, new_player, x, y, enemy, wall = None, None, None, None, None, None
+    number_of_enemy = 0
+    number_of_bush = 0
+    number_of_invis = 0
+    win_tile, new_player, x, y, enemy, wall, invisible_tile = None, None, None, None, None, None, None
     for y in range(len(level)):
         for x in range(len(level[y])):
             if level[y][x] == '#':
-                wall = Tile('wall', x, y)
-                sprs.append(wall)
+                number_of_bush -= 1
+                wall = Tile('wall', x, y, number_of_bush)
             elif level[y][x] == '!':
-                enemy = Tile('enemy', x, y)
-                sprs.append(enemy)
+                number_of_enemy += 1
+                enemy = Enemy('enemy', x, y, number_of_enemy)
             elif level[y][x] == '*':
                 win_tile = WinTile('win', x, y)
-                sprs.append(win_tile)
+            elif level[y][x] == '%':
+                number_of_invis += 1
+                if number_of_invis <= number_of_enemy:
+                    direction = number_of_invis + 1
+                else:
+                    direction = number_of_invis
+                invisible_tile = InvisibleTile('invisible', x, y, direction)
             elif level[y][x] == '@':
                 new_player = Player(x, y)
-    return win_tile, new_player, enemy, wall, x, y
+    return invisible_tile, win_tile, new_player, enemy, wall, x, y
 
 
 fps = 60
-sprs = []
 clock = pygame.time.Clock()
 size = width, height = 800, 800
 screen = pygame.display.set_mode(size)
@@ -68,12 +76,38 @@ all_sprites = pygame.sprite.Group()
 tiles_group = pygame.sprite.Group()
 win_group = pygame.sprite.Group()
 player_group = pygame.sprite.Group()
+invisible_group = pygame.sprite.Group()
+enemys_group = pygame.sprite.Group()
+cur_enemy = pygame.sprite.Group()
 num_of_level = 1
+
+
+def terminate():
+    pygame.quit()
+    sys.exit()
+
+
+def start_screen():
+    fon = pygame.transform.scale(load_image('start_screen.png'), (800, 800))
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                terminate()
+            elif event.type == pygame.KEYDOWN or \
+                    event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+        clock.tick(fps)
+
 
 tile_images = {
     'wall': load_image('bush.png'),
     'enemy': load_image('enemy.png'),
-    'win': load_image('win_tile.png')
+    'win': load_image('win_tile.png'),
+    'invisible': load_image('invisible.png')
 }
 levels_names = {
     1: 'first_level.txt',
@@ -85,11 +119,22 @@ tile_width = tile_height = 50
 
 
 class Tile(pygame.sprite.Sprite):
-    def __init__(self, tile_type, pos_x, pos_y):
+    def __init__(self, tile_type, pos_x, pos_y, n):
         super().__init__(tiles_group, all_sprites)
+        self.type = n
         image_1 = tile_images[tile_type]
         self.image = pygame.transform.scale(image_1, (50, 50))
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
         self.mask = pygame.mask.from_surface(self.image)
+
+
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y, n):
+        super().__init__(enemys_group, all_sprites)
+        self.type = n
+        image_1 = tile_images[tile_type]
+        self.image = pygame.transform.scale(image_1, (50, 50))
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
@@ -98,9 +143,9 @@ class Player(pygame.sprite.Sprite):
     def __init__(self, pos_x, pos_y):
         super().__init__(player_group, all_sprites)
         self.image = player_image
-        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
+        self.mask = pygame.mask.from_surface(self.image)
 
 
 class WinTile(pygame.sprite.Sprite):
@@ -108,14 +153,24 @@ class WinTile(pygame.sprite.Sprite):
         super().__init__(win_group, all_sprites)
         image_1 = tile_images[tile_type]
         self.image = pygame.transform.scale(image_1, (50, 50))
-        self.mask = pygame.mask.from_surface(self.image)
         self.rect = self.image.get_rect().move(
             tile_width * pos_x, tile_height * pos_y)
 
 
-win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level('first_level.txt'))
+class InvisibleTile(pygame.sprite.Sprite):
+    def __init__(self, tile_type, pos_x, pos_y, direction):
+        super().__init__(invisible_group, all_sprites)
+        image_1 = tile_images[tile_type]
+        self.image = pygame.transform.scale(image_1, (50, 50))
+        self.rect = self.image.get_rect().move(
+            tile_width * pos_x, tile_height * pos_y)
+        self.direction = direction
+
+
+invisible_tile, win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level('first_level.txt'))
 up, down, right, left = False, False, False, False
 running = True
+start_screen()
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -149,14 +204,42 @@ while running:
         player.rect.left -= 1
     screen.blit(image, (0, 0))
 
-    if pygame.sprite.spritecollideany(player, tiles_group):
-        screen.blit(image_go, (0, 0))
+    if pygame.sprite.spritecollideany(player, invisible_group):
+        for i in invisible_group:
+            if pygame.sprite.collide_rect(player, i):
+                n = i.direction
+        for spr in enemys_group:
+            if spr.type == n:
+                spr.add(cur_enemy)
+        player_group.draw(screen)
+        win_group.draw(screen)
+        tiles_group.draw(screen)
+        cur_enemy.draw(screen)
         pygame.display.flip()
-        sleep(4)
+        cur_enemy.empty()
+    if pygame.sprite.spritecollideany(player, tiles_group) or pygame.sprite.spritecollideany(player, enemys_group):
+        if pygame.sprite.spritecollideany(player, tiles_group):
+            for spr in tiles_group:
+                if pygame.sprite.collide_mask(player, spr):
+                    screen.blit(image_go, (0, 0))
+                    pygame.display.flip()
+                    sleep(2)
+                    player.kill()
+                    invisible_tile, win_tile, player, enemy, wall, level_x, level_y = generate_level(
+                        load_level(levels_names[num_of_level]))
+                    break
+        else:
+            if pygame.sprite.spritecollideany(player, enemys_group):
+                screen.blit(image_go, (0, 0))
+                pygame.display.flip()
+                sleep(2)
+                player.kill()
+                invisible_tile, win_tile, player, enemy, wall, level_x, level_y = generate_level(
+                    load_level(levels_names[num_of_level]))
+    if pygame.sprite.spritecollideany(player, win_group):
         player.kill()
-        win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level(levels_names[num_of_level]))
-    if pygame.sprite.collide_mask(player, win_tile):
-        player.kill()
+        for spr in all_sprites:
+            spr.kill()
         num_of_level += 1
         if num_of_level == 3:
             screen.blit(image_end, (0, 0))
@@ -164,14 +247,14 @@ while running:
             sleep(5)
             running = False
         else:
-            for i in sprs:
-                i.kill()
             screen.blit(image_nl, (0, 0))
             pygame.display.flip()
             sleep(4)
-            win_tile, player, enemy, wall, level_x, level_y = generate_level(load_level(levels_names[num_of_level]))
+            invisible_tile, win_tile, player, enemy, wall, level_x, level_y = generate_level(
+                load_level(levels_names[num_of_level]))
     clock.tick(fps)
-    all_sprites.draw(screen)
+    player_group.draw(screen)
+    win_group.draw(screen)
+    tiles_group.draw(screen)
     pygame.display.flip()
 pygame.quit()
-
